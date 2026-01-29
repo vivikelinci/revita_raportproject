@@ -16,12 +16,14 @@
             <option value="{{ revitaLoop.nis }}">{{ revitaLoop.nis }} - {{ revitaLoop.nama }}</option>
         {% endfor %}
     </select>
+    <hr>
     <select name="revitaSemester">
         <option value="None">Semua Semester</option>
         {% for revitaLoop in revitaListsem %}
             <option value="{{ revitaLoop.semester }}">{{ revitaLoop.semester }} - {{ revitaLoop.semester }}</option>
         {% endfor %}
     </select>
+    <hr>
     <select name="revitaTahunAjar">
         <option value="None">Semua Tahun Ajaran</option>
         {% for revitaLoop in revitaListtahun %}

@@ -71,7 +71,7 @@ def siswa():
     cursor.close()
     conn.close()
 
-    return render_template('siswa.html',revitaData=revitaData, revitaListsis= revitaListsis, revitaListsem=revitaListsem, revitaListtahun=revitaListtahun)
+    return render_template('siswa.html',revitaData=revitaData, revitaListsis=revitaListsis, revitaListsem=revitaListsem, revitaListtahun=revitaListtahun)
 
     
 @app.route('/tambah_nilai')
