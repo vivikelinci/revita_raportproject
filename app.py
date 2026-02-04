@@ -1,8 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, make_response
 from fpdf import FPDF
 import mysql.connector
+import os
 
 app = Flask(__name__, template_folder='templates')
+
+PDF_FOLDER = "raport_output"
+
+if not os.path.exists(PDF_FOLDER):
+    os.makedirs(PDF_FOLDER)
 
 def get_db_connection():
     try:
@@ -163,75 +169,115 @@ def delete_nilai(id_nilai):
 
 @app.route('/cetak', methods=['GET'])
 def cetak():
+    semester = request.args.get('semester')
+    tahun_ajar = request.args.get('tahun_ajar')
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT a.nama, a.nis, d.nama_kelas, b.id_mapel, b.nama_mapel, c.deskripsi, c.semester, (c.nilai_tugas+c.nilai_uts+c.nilai_uas)/3 as nilai_akhir FROM siswa_revita a, nilai_revita c , mapel_revita b, kelas_revita d WHERE b.id_mapel=c.id_mapel AND a.nis=c.nis AND a.id_kelas=d.id_kelas AND a.nis=%s AND c.semester=%s ORDER BY b.id_mapel;", (nis, semester,))
-    revitaNilai = cursor.fetchall()
-    cursor.execute("SELECT absensi, COUNT(absensi) AS jumlah FROM absensi_revita WHERE nis = %s AND semester = %s GROUP BY absensi;", (nis, semester,))
-    revitaAbsensi = cursor.fetchall()
+
+    # ambil semua kelas
+    cursor.execute("SELECT id_kelas,nama_kelas FROM kelas_revita")
+    kelas_list = cursor.fetchall()
+
+    for kelas in kelas_list:
+
+        kelas_id = kelas['id_kelas']
+        nama_kelas = kelas['nama_kelas']
+
+        folder_kelas = os.path.join(PDF_FOLDER, nama_kelas)
+        os.makedirs(folder_kelas, exist_ok=True)
+
+        pdf = FPDF()
+        pdf.add_font('DejaVu','', 'static/DejaVuSans.ttf', uni=True)
+
+        # ambil siswa per kelas
+        cursor.execute("""
+            SELECT DISTINCT a.nis
+            FROM siswa_revita a
+            JOIN nilai_revita b ON a.nis=b.nis
+            WHERE a.id_kelas=%s
+            AND (%s IS NULL OR b.semester=%s)
+            AND (%s IS NULL OR b.tahun_ajar=%s)
+        """,(kelas_id,semester,semester,tahun_ajar,tahun_ajar))
+
+        siswa_list = cursor.fetchall()
+
+        if not siswa_list:
+            continue
+
+        for siswa in siswa_list:
+
+            nis = siswa['nis']
+
+            cursor.execute("""
+                SELECT a.nama,a.nis,d.nama_kelas,
+                       b.nama_mapel,c.deskripsi,c.semester,
+                       (c.nilai_tugas+c.nilai_uts+c.nilai_uas)/3 nilai_akhir
+                FROM siswa_revita a
+                JOIN nilai_revita c ON a.nis=c.nis
+                JOIN mapel_revita b ON b.id_mapel=c.id_mapel
+                JOIN kelas_revita d ON a.id_kelas=d.id_kelas
+                WHERE a.nis=%s
+                AND (%s IS NULL OR c.semester=%s)
+                AND (%s IS NULL OR c.tahun_ajar=%s)
+            """,(nis,semester,semester,tahun_ajar,tahun_ajar))
+
+            nilai = cursor.fetchall()
+
+            if not nilai:
+                continue
+
+            cursor.execute("""
+                SELECT absensi,COUNT(*) jumlah
+                FROM absensi_revita
+                WHERE nis=%s
+                GROUP BY absensi
+            """,(nis,))
+
+            absensi = cursor.fetchall()
+
+            pdf.add_page()
+            pdf.set_font('DejaVu','',11)
+
+            pdf.cell(0,10,'LAPORAN HASIL BELAJAR',ln=1,align='C')
+
+            pdf.cell(40,8,'Nama')
+            pdf.cell(60,8,nilai[0]['nama'])
+            pdf.cell(30,8,'Kelas')
+            pdf.cell(0,8,nama_kelas,ln=1)
+
+            pdf.cell(40,8,'NIS')
+            pdf.cell(60,8,nilai[0]['nis'])
+            pdf.cell(30,8,'Semester')
+            pdf.cell(0,8,str(nilai[0]['semester']),ln=1)
+
+            pdf.ln(5)
+
+            pdf.set_fill_color(220,220,220)
+            pdf.cell(10,8,'No',1,0,'C',True)
+            pdf.cell(60,8,'Mapel',1,0,'C',True)
+            pdf.cell(30,8,'Nilai',1,0,'C',True)
+            pdf.cell(90,8,'Deskripsi',1,1,'C',True)
+
+            no=1
+            for n in nilai:
+                pdf.cell(10,8,str(no),1)
+                pdf.cell(60,8,n['nama_mapel'],1)
+                pdf.cell(30,8,f"{n['nilai_akhir']:.2f}",1)
+                pdf.cell(90,8,n['deskripsi'],1,1)
+                no+=1
+
+            pdf.ln(5)
+            pdf.cell(0,8,'Kehadiran',ln=1)
+
+            for a in absensi:
+                pdf.cell(50,8,a['absensi'],1)
+                pdf.cell(50,8,str(a['jumlah']),1,ln=1)
+
+        file_pdf = os.path.join(folder_kelas,f"RAPORT_{nama_kelas}.pdf")
+        pdf.output(file_pdf)
+
     cursor.close()
     conn.close()
 
-    revitaPDF = FPDF()
-    revitaPDF.add_page()
-    
-    revitaPDF.add_font('DejaVu', '', 'static/DejaVuSans.ttf', uni=True)
-    revitaPDF.set_font('DejaVu', '', 11)
-
-    revitaPDF.set_font_size(14)
-    revitaPDF.cell(0, 10, 'Laporan Hasil Belajar', new_x='LMARGIN', new_y='NEXT', align='C')
-    revitaPDF.ln(5)
-
-    revitaPDF.set_font_size(11)
-    revitaPDF.set_fill_color(220, 220, 220)
-    revitaPDF.cell(40, 8, 'Nama:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, revitaNilai[0]['nama'], 0, 0, 'L', False)
-    revitaPDF.cell(40, 8, 'Kelas:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, revitaNilai[0]['nama_kelas'], 0, 0, 'L', False)
-    revitaPDF.ln()
-
-    revitaPDF.cell(40, 8, 'NIS:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, revitaNilai[0]['nis'], 0, 0, 'L', False)
-    revitaPDF.cell(40, 8, 'Semester:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, str(revitaNilai[0]['semester']), 0, 0, 'L', False)
-    revitaPDF.ln()
-
-    revitaPDF.cell(40, 8, 'Sekolah:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, 'SMK Negeri 2 Cimahi', 0, 0, 'L', False)
-    revitaPDF.cell(40, 8, 'Tahun Ajaran:', 0, 0, 'L', False)
-    revitaPDF.cell(55, 8, '2025-2026', 0, 0, 'L', False)
-    revitaPDF.ln(20)
-    
-    revitaPDF.cell(10, 8, 'No', 1, 0, 'C', True)
-    revitaPDF.cell(60, 8, 'Mata Pelajaran', 1, 0, 'C', True)
-    revitaPDF.cell(40, 8, 'Nilai Akhir', 1, 0, 'C', True)
-    revitaPDF.cell(80, 8, 'Capaian Kompetensi', 1, 0, 'C', True)
-    revitaPDF.ln()
-
-    for revitaLoop in revitaNilai:
-        revitaPDF.cell(10, 8, str(revitaLoop['id_mapel']), 1, 0, 'L', False)
-        revitaPDF.cell(60, 8, str(revitaLoop['nama_mapel']), 1, 0, 'L', False)
-        revitaPDF.cell(40, 8, str(revitaLoop['nilai_akhir']), 1, 0, 'L', False)
-        revitaPDF.cell(80, 8, str(revitaLoop['deskripsi']), 1, 0, 'L', False)
-        revitaPDF.ln()
-    revitaPDF.ln(20)
-
-    revitaPDF.cell(100, 8, 'Kehadiran', 1, 0, 'C', True)
-    revitaPDF.ln()
-    for revitaLoop in revitaAbsensi:
-        revitaPDF.cell(50, 8, str(revitaLoop['absensi']), 1, 0, 'L', False)
-        revitaPDF.cell(50, 8, str(revitaLoop['jumlah']), 1, 0, 'L', False)
-        revitaPDF.ln()
-    revitaPDF.ln(20)
-
-    revitaPDF.cell(100, 8, 'TTD Orang Tua Peserta Didik', align='C')
-    revitaPDF.cell(0, 8, 'TTD Wali Kelas', new_x='LMARGIN', new_y='NEXT', align='C')
-    revitaPDF.ln(30)
-    revitaPDF.cell(0, 8, 'TTD Kepala Sekolah', new_x='LMARGIN', new_y='NEXT', align='C')
-
-    revitaPDFTampil = bytes(revitaPDF.output(dest='S'))
-    revitaResponse = make_response(revitaPDFTampil)
-    revitaResponse.headers['Content-Type'] = 'application/pdf'
-    revitaResponse.headers['Content-Disposition'] = (f'inline; filename=RAPORT_{nis}.pdf')
-
-    return revitaResponse
+    return "SEMUA RAPORT PER KELAS BERHASIL DIBUAT"
