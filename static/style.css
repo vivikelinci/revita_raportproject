@@ -1,0 +1,104 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', Arial, sans-serif;
+    background: #f8f9fa;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: maroon;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+label {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+input[type="text"], input[type="number"], select{
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    outline: none;
+    transition: 0.2s;
+    width: 100%;
+}
+
+input:focus, select:focus {
+    border-color: maroon;
+    box-shadow: 0 0 5px rgba(188, 26, 26, 0.5);
+}
+
+.radio-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+input[type="radio"] {
+    accent-color: maroon;
+    cursor: pointer;
+}
+
+input[type="submit"], button  {
+    background: maroon;
+    border: none;
+    color: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+input[type="submit"]:hover, button:hover {
+    background: #a00000;
+}
+
+table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+table td, table th {
+    padding: 12px;
+    order: 1px solid #eee;
+    border: 1px solid #ccc;
+}
+
+table tr:nth-child(even) {
+    background: #f9f9f9;
+}
+
+a {
+    color: #fff;
+    text-decoration: none;
+}
+hr {
+    color: #ccc;
+}

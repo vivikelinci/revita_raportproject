@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Revita Gadis Amijaya</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Data Nilai Siswa</h1>
+  <center><button><a href="{{ url_for('tambah_nilai')}}">Tambah Data</a></button><button><a href="{{ url_for('siswa')}}">Data Siswa</a></button></center>
+  <br>
+  <table>
+      <tr>
+        <th>No</th>
+        <th>Nama</th>
+        <th>Mapel</th>
+        <th>Nilai Harian</th>
+        <th>Nilai UTS</th>
+        <th>Nilai UAS</th>
+        <th>Nilai Akhir</th>
+        <th>Deskripsi</th>
+        <th>Semester</th>
+		<th>Aksi</th>
+      </tr>
+      {%if revitaNilai%}
+      {%for revitaData in revitaNilai%}
+        <tr>
+          <td>{{revitaData.id_nilai}}</td>
+          <td>{{revitaData.nama}}</td>
+          <td>{{revitaData.nama_mapel}}</td>
+          <td>{{revitaData.nilai_tugas}}</td>
+          <td>{{revitaData.nilai_uts}}</td>
+          <td>{{revitaData.nilai_uas}}</td>
+          <td>{{ "{:,.2f}".format(revitaData.nilai_akhir) }}</td>
+          <td>{{revitaData.deskripsi}}</td>
+          <td>{{revitaData.semester}}</td>
+		  <td style="text-align: center;"><a style="color: black;" href="{{ url_for('edit_nilai', id_nilai=revitaData.id_nilai) }}">Edit</a> 
+		  <hr> 
+		  <a style="color: black;" href="{{ url_for('delete_nilai', id_nilai=revitaData.id_nilai) }}" onclick="return confirm('Apakah Anda Yakin?')">Hapus</a>
+		  </td>
+        </tr>
+      {%endfor%}
+      {%else%}
+        <tr>
+          <td>Data Tidak Ditemukan</td>
+        </tr>
+      {%endif%}
+    </table>
+    <br>
+  </center>
+  
+</body>
+</html>
